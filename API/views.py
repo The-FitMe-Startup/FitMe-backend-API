@@ -1,7 +1,11 @@
+from datetime import datetime
+
+import pytz
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, User
+from django.views.decorators.csrf import csrf_exempt
 from knox.models import AuthToken
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, viewsets, parsers, renderers
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -31,20 +35,43 @@ class ProfileUpdateAPI(mixins.UpdateModelMixin,
     queryset = User.objects.all()
     serializer_class = UpdateDeleteProfileSerializer
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'exclude_fields': [
+                'liked_outfits'
+            ]
+        })
+        return context
+
 
 class OutfitPostViewSet(viewsets.ModelViewSet):
-    def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
     queryset = OutfitPost.objects.all().order_by('date_created')
     serializer_class = OutfitPostSerializer
-    permission_classes = []  # permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, date_created=datetime.now(tz=pytz.UTC))
+
+    @action(detail=True, methods=['post'], renderer_classes=[renderers.JSONRenderer])
+    def like(self, request, *args, **kwargs):
+        data = {
+            'liked_outfits': [self.get_object().id]
+        }
+        serializer = ProfileSerializer(request.user.profile, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    permission_classes = []
+    parser_classes = [parsers.MultiPartParser]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class SubscriptionLevelViewSet(viewsets.ModelViewSet):

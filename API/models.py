@@ -38,8 +38,8 @@ class Item(models.Model):
     picture = models.ImageField(upload_to="images/")
     brand = models.CharField()
     color = models.CharField()
-    type = models.OneToOneField(PieceType, on_delete=models.CASCADE)
-    material = models.OneToOneField(Material, on_delete=models.CASCADE)
+    type = models.ForeignKey(PieceType, on_delete=models.CASCADE)
+    material = models.ForeignKey(Material, on_delete=models.CASCADE)
 
 
 class OutfitPost(models.Model):

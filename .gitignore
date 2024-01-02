@@ -6,3 +6,9 @@ venv/
 
 # Ignore Mac system files
 .DS_store
+
+# Ignore local testing file
+/API/test.py
+
+# Ignore user uploaded files
+/images/

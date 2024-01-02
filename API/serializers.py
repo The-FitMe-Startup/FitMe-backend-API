@@ -7,7 +7,18 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['id', 'is_public', 'subscription_level', 'liked_outfits']
-        extra_kwargs = {'liked_outfits': {'read_only': True}}
+        # extra_kwargs = {'liked_outfits': {'read_only': True}}
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        exclude_fields = self.context.get('exclude_fields', [])
+        for field in exclude_fields:
+            # providing a default prevents a KeyError
+            # if the field does not exist
+            fields.pop(field, default=None)
+
+        return fields
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -18,8 +29,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email', 'outfitPosts', 'profile']
 
+
 class UpdateDeleteProfileSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(many=False)
+
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'profile')
@@ -35,6 +48,7 @@ class UpdateDeleteProfileSerializer(serializers.ModelSerializer):
         instance.last_name = validated_data.get('last_name')
         instance.save()
         return instance
+
 
 class CreateUserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer(many=False)
@@ -58,17 +72,18 @@ class CreateUserSerializer(serializers.ModelSerializer):
 
 
 class OutfitPostSerializer(serializers.ModelSerializer):
-    author = serializers.ReadOnlyField(source='author.username')
+    author = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = OutfitPost
-        fields = ['author', 'items', 'generated']
+        fields = '__all__'
 
 
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
         fields = '__all__'
+        extra_kwargs = {'owner': {'read_only': True}}
 
 
 class SubscriptionLevelSerializer(serializers.ModelSerializer):
