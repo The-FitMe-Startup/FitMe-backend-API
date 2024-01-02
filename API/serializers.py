@@ -77,6 +77,7 @@ class OutfitPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = OutfitPost
         fields = '__all__'
+        extra_kwargs = {'generated': {'read_only': True}, 'date_created': {'read_only': True}, 'total_price': {'read_only': True}}
 
 
 class ItemSerializer(serializers.ModelSerializer):

@@ -51,7 +51,19 @@ class OutfitPostViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user, date_created=datetime.now(tz=pytz.UTC))
+        items = self.get_object().items
+        print(items)
+        total = 0
+        for item in items:
+            if item.price is not None:
+                total+=item.price
+
+        generated = 'generated' in self.request.keys()
+
+        serializer.save(author=self.request.user,
+                        date_created=datetime.now(tz=pytz.UTC),
+                        total_price=total,
+                        generated=generated)
 
     @action(detail=True, methods=['post'], renderer_classes=[renderers.JSONRenderer])
     def like(self, request, *args, **kwargs):

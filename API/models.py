@@ -11,19 +11,20 @@ class SubscriptionLevel(models.Model):
 
 
 class Profile(models.Model):
+    Budgets = {
+        "LOW": "$0-100",
+        "MID": "$100-300",
+        "HIGH": "$300-500",
+        "DESIGNER": "$500+"
+    }  # tbd
+
     user = models.OneToOneField(User, related_name='profile', on_delete=models.CASCADE)
     subscription_level = models.ForeignKey(SubscriptionLevel, on_delete=models.CASCADE)
     liked_outfits = models.ManyToManyField("OutfitPost")  # using model that is not yet defined
     is_public = models.BooleanField(default=True)
+    picture = models.ImageField(upload_to="images/profile-pictures/", null=True, blank=True)
+    budget = models.CharField(choices=Budgets, null=True, blank=True)
 
-"""@receiver(post_save, sender=User)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
-
-@receiver(post_save, sender=User)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()"""
 
 class PieceType(models.Model):
     title = models.CharField()
@@ -35,11 +36,12 @@ class Material(models.Model):
 
 class Item(models.Model):
     owner = models.ForeignKey(User, related_name='items', on_delete=models.CASCADE)
-    picture = models.ImageField(upload_to="images/")
+    picture = models.ImageField(upload_to="images/items/")
     brand = models.CharField()
-    color = models.CharField()
+    color = models.CharField() # can be filled out by AI
     type = models.ForeignKey(PieceType, on_delete=models.CASCADE)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
+    price = models.IntegerField(null=True, blank=True)
 
 
 class OutfitPost(models.Model):
@@ -47,3 +49,7 @@ class OutfitPost(models.Model):
     items = models.ManyToManyField(Item)
     generated = models.BooleanField(default=False)
     date_created = models.DateTimeField()
+    picture = models.ImageField(upload_to="images/outfits/")
+    total_price = models.IntegerField(null=True, blank=True)
+    title = models.CharField(null=True, blank=True)
+    description = models.CharField(null=True, blank=True)
