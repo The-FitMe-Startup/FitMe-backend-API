@@ -14,8 +14,10 @@ router.register(r'users', views.UserViewSet, basename='user')
 router.register(r'profile_update', views.ProfileUpdateAPI, basename='profileUpdate')
 router.register(r'items', views.ItemViewSet, basename='item')
 router.register(r'materials', views.MaterialViewSet, basename='material')
-router.register(r'subscription_level', views.SubscriptionLevelViewSet, basename='subscriptionLevel')
-router.register(r'piece_type', views.PieceTypeViewSet, basename='pieceType')
+router.register(r'subscription_levels', views.SubscriptionLevelViewSet, basename='subscriptionLevel')
+router.register(r'piece_types', views.PieceTypeViewSet, basename='pieceType')
+router.register(r'style_tags', views.StyleTagViewSet, basename='styleTag')
+router.register(r'creators', views.CreatorViewSet, basename='creator')
 
 # The API URLs are now determined automatically by the router.
 urlpatterns = [

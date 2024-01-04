@@ -1,5 +1,4 @@
 from datetime import datetime
-
 import pytz
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import Group, User
@@ -10,30 +9,47 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from API.permissions import IsSelfOrAdmin, IsSelf, IsAuthorOrReadAndCreateOnly, IsAdminOrReadOnly
 from API.serializers import UserSerializer, OutfitPostSerializer, ItemSerializer, CreateUserSerializer, \
     SubscriptionLevelSerializer, PieceTypeSerializer, MaterialSerializer, ProfileSerializer, \
-    UpdateDeleteProfileSerializer
-from API.models import OutfitPost, Item, SubscriptionLevel, PieceType, Material
+    UpdateDeleteProfileSerializer, StyleTagSerializer
+from API.models import OutfitPost, Item, SubscriptionLevel, PieceType, Material, StyleTag
 from rest_framework.decorators import action
 from rest_framework import generics
 from rest_framework import mixins
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     """
     This viewset automatically provides `list` and `retrieve` actions.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated,IsSelfOrAdmin]
 
+class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    This viewset automatically provides `list` and `retrieve` actions.
+    """
+    queryset = User.objects.filter(is_superuser=False).filter(profile__is_public=True)
+    serializer_class = UserSerializer
+    permission_classes = []
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'exclude_fields': [
+                'email'
+            ]
+        })
+        return context
 
 class ProfileUpdateAPI(mixins.UpdateModelMixin,
                        mixins.DestroyModelMixin,
-                       mixins.ListModelMixin,
-                       mixins.RetrieveModelMixin,
                        viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UpdateDeleteProfileSerializer
+    permission_classes = [IsSelf]
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
@@ -45,10 +61,16 @@ class ProfileUpdateAPI(mixins.UpdateModelMixin,
         return context
 
 
+class StyleTagViewSet(viewsets.ModelViewSet):
+    queryset = StyleTag.objects.all()
+    serializer_class = StyleTagSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
 class OutfitPostViewSet(viewsets.ModelViewSet):
     queryset = OutfitPost.objects.all().order_by('date_created')
     serializer_class = OutfitPostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadAndCreateOnly]
 
     def perform_create(self, serializer):
         items = self.get_object().items
@@ -89,7 +111,7 @@ class ItemViewSet(viewsets.ModelViewSet):
 class SubscriptionLevelViewSet(viewsets.ModelViewSet):
     queryset = SubscriptionLevel.objects.all()
     serializer_class = SubscriptionLevelSerializer
-    permission_classes = []
+    permission_classes = [IsAdminOrReadOnly]
 
 
 class PieceTypeViewSet(viewsets.ModelViewSet):
@@ -106,6 +128,7 @@ class MaterialViewSet(viewsets.ModelViewSet):
 
 class RegistrationAPI(generics.GenericAPIView):
     serializer_class = CreateUserSerializer
+    permission_classes = []
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -118,6 +141,15 @@ class RegistrationAPI(generics.GenericAPIView):
             "user": UserSerializer(user, context=self.get_serializer_context()).data,
             "token": AuthToken.objects.create(user)[1]
         })
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({
+            'exclude_fields': [
+                'liked_outfits'
+            ]
+        })
+        return context
 
 
 class LoginAPI(generics.GenericAPIView):

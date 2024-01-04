@@ -34,6 +34,10 @@ class Material(models.Model):
     title = models.CharField()
 
 
+class StyleTag(models.Model):
+    title = models.CharField()
+
+
 class Item(models.Model):
     owner = models.ForeignKey(User, related_name='items', on_delete=models.CASCADE)
     picture = models.ImageField(upload_to="images/items/")
@@ -42,6 +46,7 @@ class Item(models.Model):
     type = models.ForeignKey(PieceType, on_delete=models.CASCADE)
     material = models.ForeignKey(Material, on_delete=models.CASCADE)
     price = models.IntegerField(null=True, blank=True)
+    style_tags = models.ManyToManyField(StyleTag)
 
 
 class OutfitPost(models.Model):
@@ -53,3 +58,4 @@ class OutfitPost(models.Model):
     total_price = models.IntegerField(null=True, blank=True)
     title = models.CharField(null=True, blank=True)
     description = models.CharField(null=True, blank=True)
+    style_tags = models.ManyToManyField(StyleTag)

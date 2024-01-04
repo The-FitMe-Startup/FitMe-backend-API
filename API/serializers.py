@@ -1,6 +1,12 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from API.models import OutfitPost, Item, Material, PieceType, SubscriptionLevel, Profile
+from API.models import OutfitPost, Item, Material, PieceType, SubscriptionLevel, Profile, StyleTag
+
+
+class StyleTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StyleTag
+        fields = ('id', 'title')
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -27,7 +33,18 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'outfitPosts', 'profile']
+        fields = ['id', 'username', 'email', 'outfitPosts', 'first_name', 'last_name', 'profile']
+
+    def get_fields(self):
+        fields = super().get_fields()
+
+        exclude_fields = self.context.get('exclude_fields', [])
+        for field in exclude_fields:
+            # providing a default prevents a KeyError
+            # if the field does not exist
+            fields.pop(field, default=None)
+
+        return fields
 
 
 class UpdateDeleteProfileSerializer(serializers.ModelSerializer):
@@ -40,7 +57,7 @@ class UpdateDeleteProfileSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         data = validated_data.get('profile')
         data.update({'subscription_level': data.get('subscription_level').id})
-        serializer = ProfileSerializer(instance.profile, data=validated_data.get('profile'))
+        serializer = ProfileSerializer(instance.profile, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
