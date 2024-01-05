@@ -1,36 +1,35 @@
 from datetime import datetime
+
 import pytz
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import Group, User
-from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
 from knox.models import AuthToken
-from rest_framework import permissions, viewsets, parsers, renderers
-from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework import generics
+from rest_framework import mixins
+from rest_framework import viewsets, parsers, renderers
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
+
+from API.models import OutfitPost, Item, SubscriptionLevel, PieceType, Material, StyleTag
 from API.permissions import IsSelfOrAdmin, IsSelf, IsAuthorOrReadAndCreateOnly, IsAdminOrReadOnly, \
     IsAuthenticatedToCreateOrReadOnly
 from API.serializers import UserSerializer, OutfitPostSerializer, ItemSerializer, CreateUserSerializer, \
     SubscriptionLevelSerializer, PieceTypeSerializer, MaterialSerializer, ProfileSerializer, \
     UpdateDeleteProfileSerializer, StyleTagSerializer
-from API.models import OutfitPost, Item, SubscriptionLevel, PieceType, Material, StyleTag
-from rest_framework.decorators import action
-from rest_framework import generics
-from rest_framework import mixins
 
 
 class UserViewSet(viewsets.ModelViewSet):
     """
-    This viewset automatically provides `list` and `retrieve` actions.
+    This view set automatically provides `list` and `retrieve` actions.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsSelfOrAdmin]
 
+
 class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    This viewset automatically provides `list` and `retrieve` actions.
+    This view set automatically provides `list` and `retrieve` actions.
     """
     queryset = User.objects.filter(is_superuser=False).filter(profile__is_public=True)
     serializer_class = UserSerializer
@@ -44,6 +43,7 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
             ]
         })
         return context
+
 
 class ProfileUpdateAPI(mixins.RetrieveModelMixin,
                        mixins.UpdateModelMixin,
@@ -70,7 +70,7 @@ class StyleTagViewSet(viewsets.ModelViewSet):
 
 
 class OutfitPostViewSet(viewsets.ModelViewSet):
-    queryset = OutfitPost.objects.all().order_by('date_created')
+    queryset = OutfitPost.objects.filter(is_public=True).order_by('date_created')
     serializer_class = OutfitPostSerializer
     permission_classes = [IsAuthorOrReadAndCreateOnly]
 
@@ -80,7 +80,7 @@ class OutfitPostViewSet(viewsets.ModelViewSet):
         total = 0
         for item in items:
             if item.price is not None:
-                total+=item.price
+                total += item.price
 
         generated = 'generated' in self.request.keys()
 
@@ -99,6 +99,12 @@ class OutfitPostViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(serializer.data)
 
+    @action(methods=['get'], detail=False, renderer_classes=[renderers.JSONRenderer])
+    def get_closet_outfits(self, request, *args, **kwargs):
+        outfits = OutfitPost.objects.filter(author=request.user)
+        serializer = self.get_serializer(outfits, many=True)
+        return Response(serializer.data)
+
 
 class ItemViewSet(mixins.RetrieveModelMixin,
                   mixins.UpdateModelMixin,
@@ -111,6 +117,12 @@ class ItemViewSet(mixins.RetrieveModelMixin,
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    @action(methods=['get'], detail=False, renderer_classes=[renderers.JSONRenderer])
+    def get_closet(self, request, *args, **kwargs):
+        items = Item.objects.filter(owner=request.user)
+        serializer = self.get_serializer(items, many=True)
+        return Response(serializer.data)
 
 
 class SubscriptionLevelViewSet(viewsets.ModelViewSet):

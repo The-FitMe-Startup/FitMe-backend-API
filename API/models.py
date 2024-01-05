@@ -59,3 +59,4 @@ class OutfitPost(models.Model):
     title = models.CharField(null=True, blank=True)
     description = models.CharField(null=True, blank=True)
     style_tags = models.ManyToManyField(StyleTag)
+    is_public = models.BooleanField()
