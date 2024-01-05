@@ -9,7 +9,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from API.permissions import IsSelfOrAdmin, IsSelf, IsAuthorOrReadAndCreateOnly, IsAdminOrReadOnly
+from API.permissions import IsSelfOrAdmin, IsSelf, IsAuthorOrReadAndCreateOnly, IsAdminOrReadOnly, \
+    IsAuthenticatedToCreateOrReadOnly
 from API.serializers import UserSerializer, OutfitPostSerializer, ItemSerializer, CreateUserSerializer, \
     SubscriptionLevelSerializer, PieceTypeSerializer, MaterialSerializer, ProfileSerializer, \
     UpdateDeleteProfileSerializer, StyleTagSerializer
@@ -25,7 +26,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated,IsSelfOrAdmin]
+    permission_classes = [IsSelfOrAdmin]
 
 class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -44,7 +45,8 @@ class CreatorViewSet(viewsets.ReadOnlyModelViewSet):
         })
         return context
 
-class ProfileUpdateAPI(mixins.UpdateModelMixin,
+class ProfileUpdateAPI(mixins.RetrieveModelMixin,
+                       mixins.UpdateModelMixin,
                        mixins.DestroyModelMixin,
                        viewsets.GenericViewSet):
     queryset = User.objects.all()
@@ -64,13 +66,13 @@ class ProfileUpdateAPI(mixins.UpdateModelMixin,
 class StyleTagViewSet(viewsets.ModelViewSet):
     queryset = StyleTag.objects.all()
     serializer_class = StyleTagSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedToCreateOrReadOnly]
 
 
 class OutfitPostViewSet(viewsets.ModelViewSet):
     queryset = OutfitPost.objects.all().order_by('date_created')
     serializer_class = OutfitPostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadAndCreateOnly]
+    permission_classes = [IsAuthorOrReadAndCreateOnly]
 
     def perform_create(self, serializer):
         items = self.get_object().items
@@ -98,11 +100,14 @@ class OutfitPostViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class ItemViewSet(viewsets.ModelViewSet):
+class ItemViewSet(mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.DestroyModelMixin,
+                  viewsets.GenericViewSet):
     queryset = Item.objects.all()
     serializer_class = ItemSerializer
     parser_classes = [parsers.MultiPartParser]
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsSelf]
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
@@ -117,13 +122,13 @@ class SubscriptionLevelViewSet(viewsets.ModelViewSet):
 class PieceTypeViewSet(viewsets.ModelViewSet):
     queryset = PieceType.objects.all()
     serializer_class = PieceTypeSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticatedToCreateOrReadOnly]
 
 
 class MaterialViewSet(viewsets.ModelViewSet):
     queryset = Material.objects.all()
     serializer_class = MaterialSerializer
-    permission_classes = []
+    permission_classes = [IsAuthenticatedToCreateOrReadOnly]
 
 
 class RegistrationAPI(generics.GenericAPIView):
